@@ -375,9 +375,9 @@ int signal()
    int rsi_trend=0;
    int trend=0;
    double ma=iMA(NULL,ma_timeframe,1,0,0,PRICE_CLOSE,0);
-   if(rsi>rsi1&&rsi1>rsi2&&rsi2<35)
+   if(rsi>rsi1&&rsi1>rsi2&&rsi2<lower)
       rsi_trend=1;
-   if(rsi<rsi1&&rsi1<rsi2&&rsi2>65)
+   if(rsi<rsi1&&rsi1<rsi2&&rsi2>upper)
       rsi_trend=-1;
    if(use_trend)
      {
@@ -387,9 +387,9 @@ int signal()
       double fast_ma3=iMA(NULL,trend_timeframe,ma_period,0,0,PRICE_OPEN,3);
       double mid_ma=iMA(NULL,trend_timeframe,mid_period,0,0,PRICE_CLOSE,0);
       double slow_ma=iMA(NULL,trend_timeframe,trend_period,0,0,PRICE_CLOSE,0);
-      double slow_ma1=iMA(NULL,trend_timeframe,trend_period,0,0,PRICE_CLOSE,1);
-      double slow_ma2=iMA(NULL,trend_timeframe,trend_period,0,0,PRICE_CLOSE,2);
-      double slow_ma3=iMA(NULL,trend_timeframe,trend_period,0,0,PRICE_CLOSE,3);
+      double slow_ma1=iMA(NULL,trend_timeframe,trend_period,0,0,PRICE_CLOSE,2);
+      double slow_ma2=iMA(NULL,trend_timeframe,trend_period,0,0,PRICE_CLOSE,4);
+      double slow_ma3=iMA(NULL,trend_timeframe,trend_period,0,0,PRICE_CLOSE,8);
       double ma_fast_diff=MathAbs(MarketInfo(Symbol(),MODE_BID)-fast_ma);
       double ma_slow_diff=MathAbs(MarketInfo(Symbol(),MODE_BID)-slow_ma);
       double ma_diff=MathAbs(fast_ma-slow_ma);
@@ -399,22 +399,22 @@ int signal()
       bool slow_down=slow_ma<slow_ma1 && slow_ma1<slow_ma2&&slow_ma2<slow_ma3;
       if(use_diff)
         {
-         if(fast_up && fast_ma>slow_ma && ma_diff<trend_diff )
+         if(fast_up && slow_down && fast_ma>slow_ma && ma_diff<trend_diff)
            {
             trend=2;
            }
-         if(fast_ma<slow_ma && fast_down && ma_diff<trend_diff)
+         if(fast_ma<slow_ma && slow_down && fast_down && ma_diff<trend_diff)
            {
             trend=-2;
            }
         }
       else
         {
-         if(fast_up && fast_ma>slow_ma)
+         if(fast_up)
            {
             trend=2;
            }
-         if(fast_ma<slow_ma && fast_down)
+         if(fast_down)
            {
             trend=-2;
            }
@@ -423,12 +423,22 @@ int signal()
      }
    if(!use_candle && use_ma && use_trend)
      {
-      if(trend==-2)
-         return(sell);
-      if(trend==2)
-         return(buy);
+      if(use_rsi)
+        {
+         if(rsi_trend==-1 && trend==-2)
+            return(sell);
+         if(rsi_trend==1 && trend==2)
+            return(buy);
+        }
+      else
+        {
+         if(trend==-2)
+            return(sell);
+         if(trend==2)
+            return(buy);
+        }
      }
-   if(!use_candle && use_ma &&!use_trend)
+   if(!use_candle && use_ma && !use_trend)
      {
       bool ma_up=iClose(NULL,candle_timeframe,1)>ma;
       bool ma_down=iClose(NULL,candle_timeframe,1)<ma;
@@ -449,11 +459,6 @@ int signal()
       bool candle_prev1=MathAbs(iClose(NULL,candle_timeframe,1) - iOpen(NULL,candle_timeframe,1)) < 0.0012;
       bool candle_go_down=iClose(NULL,candle_timeframe,1)<iClose(NULL,candle_timeframe,2);
       bool candle_go_up=iClose(NULL,candle_timeframe,1)>iClose(NULL,candle_timeframe,2);
-      if(use_ma)
-        {
-         ma_up=iClose(NULL,candle_timeframe,1)>ma;
-         ma_down=iClose(NULL,candle_timeframe,1)<ma;
-        }
       if(rsi>upper && candle_prev1 && candle_prev2 && candle_up && candle_go_down && ma_down)
         {
          return(sell);

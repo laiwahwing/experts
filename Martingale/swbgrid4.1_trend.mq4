@@ -1,5 +1,5 @@
 //+------------------------------------------------------------------+
-//|                                        base on   swb grid 4 .mq4 |
+//|                                        base on  swb grid 4 .mq4 |
 //|                                                totom sukopratomo |
 //|                                            forexengine@gmail.com |
 //+------------------------------------------------------------------+
@@ -25,15 +25,16 @@ extern string comment="SMB";
 extern bool      use_daily_target=false;
 extern double    daily_target=100;
 extern bool      trade_in_fri=true;
-extern int       magic=243301;
+extern int       magic=243311;
 extern int       slipage=3;
 extern double    start_lot=0.02;
 extern double    range=12;
 extern int       level=25;
 extern bool      lot_multiplier=false;
+extern int       lot_percent=0;
 extern double    multiplier=1.8;
 extern double    increament=0.01;
-extern bool      use_sl_and_tp=false;
+extern bool      use_sl_and_tp=true;
 extern double    sl=50;
 extern double    tp=60;
 extern double    tp_in_money=15.0;
@@ -41,20 +42,20 @@ extern bool      stealth_mode=true;
 extern bool      use_rsi=true;
 extern int       rsi_period=14;
 extern int       rsi_shift=0;
-extern int       lower=50;
-extern int       rsi_lower=40;
-extern int       upper=50;
-extern int       rsi_upper=60;
+extern int       lower=40;
+extern int       upper=60;
 extern bool      use_candle=false;
 extern int       candle_timeframe=0;
 extern bool      use_ma=true;
 extern int       ma_period=5;
 extern int       ma_timeframe=0;
 extern bool      use_trend=true;
-extern int       trend_period=120;
+extern int       trend_period=50;
 extern int       trend_timeframe=0;
-extern double    trend_diff=0.003;
+extern double    trend_diff=0.006;
 extern int       mid_period=50;
+extern string    __diff__="Use ma diff to detect entry";
+extern bool      use_diff=false;
 extern bool      close_on_reverse=false;
 double pt;
 double minlot;
@@ -102,6 +103,18 @@ int deinit()
 //+------------------------------------------------------------------+
 void OnTick()
   {
+   if(lot_percent!=0)
+     {
+      start_lot=AccountBalance() * lot_percent * 0.01 * 0.001;
+      if(start_lot>MarketInfo(NULL,MODE_MAXLOT))
+        {
+         start_lot=MarketInfo(NULL,MODE_MAXLOT);
+        }
+      if(start_lot<MarketInfo(NULL,MODE_MINLOT))
+        {
+         start_lot=MarketInfo(NULL,MODE_MINLOT);
+        }
+     }
    if(use_daily_target && dailyprofit()>=daily_target)
      {
       Comment("\ndaily target achieved.");
@@ -356,18 +369,22 @@ int total()
 int signal()
   {
    double rsi=iRSI(Symbol(),0,rsi_period,PRICE_OPEN,rsi_shift);
-   double rsi1=iRSI(Symbol(),0,rsi_period,PRICE_OPEN,rsi_shift+3);
-   double rsi2=iRSI(Symbol(),0,rsi_period,PRICE_OPEN,rsi_shift+5);
-   double rsi3=iRSI(Symbol(),0,rsi_period,PRICE_OPEN,rsi_shift+6);
+   double rsi1=iRSI(Symbol(),0,rsi_period,PRICE_OPEN,rsi_shift+1);
+   double rsi2=iRSI(Symbol(),0,rsi_period,PRICE_OPEN,rsi_shift+2);
+   double rsi3=iRSI(Symbol(),0,rsi_period,PRICE_OPEN,rsi_shift+3);
    int rsi_trend=0;
    int trend=0;
    double ma=iMA(NULL,ma_timeframe,1,0,0,PRICE_CLOSE,0);
+   if(rsi>rsi1&&rsi1>rsi2&&rsi2<35)
+      rsi_trend=1;
+   if(rsi<rsi1&&rsi1<rsi2&&rsi2>65)
+      rsi_trend=-1;
    if(use_trend)
      {
       double fast_ma=iMA(NULL,trend_timeframe,ma_period,0,0,PRICE_OPEN,0);
-      double fast_ma1=iMA(NULL,trend_timeframe,ma_period,0,0,PRICE_OPEN,2);
-      double fast_ma2=iMA(NULL,trend_timeframe,ma_period,0,0,PRICE_OPEN,3);
-      double fast_ma3=iMA(NULL,trend_timeframe,ma_period,0,0,PRICE_OPEN,4);
+      double fast_ma1=iMA(NULL,trend_timeframe,ma_period,0,0,PRICE_OPEN,1);
+      double fast_ma2=iMA(NULL,trend_timeframe,ma_period,0,0,PRICE_OPEN,2);
+      double fast_ma3=iMA(NULL,trend_timeframe,ma_period,0,0,PRICE_OPEN,3);
       double mid_ma=iMA(NULL,trend_timeframe,mid_period,0,0,PRICE_CLOSE,0);
       double slow_ma=iMA(NULL,trend_timeframe,trend_period,0,0,PRICE_CLOSE,0);
       double slow_ma1=iMA(NULL,trend_timeframe,trend_period,0,0,PRICE_CLOSE,1);
@@ -380,36 +397,51 @@ int signal()
       bool fast_down=fast_ma<fast_ma1 && fast_ma1<fast_ma2&&fast_ma2<fast_ma3;
       bool slow_up=slow_ma>slow_ma1 && slow_ma1>slow_ma2&&slow_ma2>slow_ma3;
       bool slow_down=slow_ma<slow_ma1 && slow_ma1<slow_ma2&&slow_ma2<slow_ma3;
-      if(fast_ma>slow_ma && fast_up && slow_up)
+      if(use_diff)
         {
-         trend=2;
+         if(fast_up && fast_ma>slow_ma && ma_diff<trend_diff )
+           {
+            trend=2;
+           }
+         if(fast_ma<slow_ma && fast_down && ma_diff<trend_diff)
+           {
+            trend=-2;
+           }
         }
-      if(slow_ma>fast_ma && fast_down && slow_down)
+      else
         {
-         trend=-2;
+         if(fast_up && fast_ma>slow_ma)
+           {
+            trend=2;
+           }
+         if(fast_ma<slow_ma && fast_down)
+           {
+            trend=-2;
+           }
         }
+
      }
-   if(use_rsi && !use_candle && use_ma && use_trend && ma_diff<trend_diff)
+   if(!use_candle && use_ma && use_trend)
      {
-      if(rsi>upper && trend==-2)
+      if(trend==-2)
          return(sell);
-      if(rsi<lower && trend==2)
+      if(trend==2)
          return(buy);
      }
-   if(use_rsi && !use_candle && use_ma &&!use_trend)
+   if(!use_candle && use_ma &&!use_trend)
      {
       bool ma_up=iClose(NULL,candle_timeframe,1)>ma;
       bool ma_down=iClose(NULL,candle_timeframe,1)<ma;
-      if(rsi>rsi_upper && ma_down)
+      if(rsi>upper && ma_down)
         {
          return(sell);
         }
-      if(rsi<rsi_lower && ma_up)
+      if(rsi<lower && ma_up)
         {
          return(buy);
         }
      }
-   if(use_rsi && use_candle && !use_ma && !use_trend)
+   if(use_candle && !use_ma && !use_trend)
      {
       bool candle_up=MarketInfo(Symbol(),MODE_BID)<iClose(NULL,candle_timeframe,1);
       bool candle_down=MarketInfo(Symbol(),MODE_BID)>iOpen(NULL,candle_timeframe,1);
@@ -453,4 +485,6 @@ void closeall()
         }
      }
   }
+//+------------------------------------------------------------------+
+
 //+------------------------------------------------------------------+

@@ -399,11 +399,11 @@ int signal()
       bool slow_down=slow_ma<slow_ma1 && slow_ma1<slow_ma2&&slow_ma2<slow_ma3;
       if(use_diff)
         {
-         if(fast_up && ma_diff>trend_diff)
+         if(fast_up && fast_ma>slow_ma && ma_diff>trend_diff)
            {
             trend=2;
            }
-         if(fast_down && ma_diff>trend_diff)
+         if(fast_down && fast_ma<slow_ma && ma_diff>trend_diff)
            {
             trend=-2;
            }

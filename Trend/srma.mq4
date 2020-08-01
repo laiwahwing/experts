@@ -202,7 +202,6 @@ void OnTick()
         }
       if(signal()==sell)
         {
-         Print("what happen to you1");
          if(stealth_mode)
            {
             if(use_sl_and_tp)

@@ -17,27 +17,28 @@
 
 #property copyright "cheedo lai"
 #property link      "lhuarong@hotmail.com"
-#property description "Base on Rsi and MA"
+#property description "scalper on the morning"
 #define buy -2
 #define sell 2
 //---- input parameters
-extern string comment="SMB";
-extern bool      use_daily_target=false;
-extern double    daily_target=100;
+extern string comment="SMScalper";
+bool      use_daily_target=false;
+double    daily_target=100;
 extern bool      trade_in_fri=true;
-extern int       magic=243301;
+extern int       magic=253301;
 extern int       slipage=3;
 extern double    start_lot=0.01;
-extern double    range=12;
-extern int       level=25;
-extern bool      lot_multiplier=false;
-extern double    multiplier=1.8;
-extern double    increament=0.01;
-extern bool      use_sl_and_tp=false;
-extern double    sl=60;
-extern double    tp=60;
-extern double    tp_in_money=5.0;
-extern bool      stealth_mode=true;
+double    range=12;
+int       level=1;
+bool      lot_multiplier=false;
+extern int       lot_percent=15;
+double    multiplier=1.1;
+double    increament=0.01;
+extern bool      use_sl_and_tp=true;
+extern double    sl=20;
+extern double    tp=5;
+double    tp_in_money=5.0;
+bool      stealth_mode=true;
 extern bool      use_bb=true;
 extern int       bb_period=20;
 extern int       bb_deviation=2;
@@ -60,12 +61,17 @@ extern int       candle_timeframe=0;
 extern bool      use_ma=false;
 extern int       ma_period=6;
 extern int       ma_timeframe=0;
+extern bool time_filter=true;
+extern int start_hour=0;
+extern int end_hour=1;
+bool trade_time;
 double pt;
 double minlot;
 double stoplevel;
 int prec=0;
 int a=0;
 int ticket=0;
+int res;
 //+------------------------------------------------------------------+
 //| expert initialization function                                   |
 //+------------------------------------------------------------------+
@@ -106,6 +112,28 @@ int deinit()
 //+------------------------------------------------------------------+
 int start()
   {
+   if(lot_percent!=0)
+     {
+      start_lot=AccountBalance() * lot_percent * 0.01 * 0.001;
+      if(start_lot>MarketInfo(NULL,MODE_MAXLOT))
+        {
+         start_lot=MarketInfo(NULL,MODE_MAXLOT);
+        }
+      if(start_lot<MarketInfo(NULL,MODE_MINLOT))
+        {
+         start_lot=MarketInfo(NULL,MODE_MINLOT);
+        }
+     }
+   trade_time=Hour()<start_hour||Hour()>end_hour;
+   if(time_filter&&trade_time&&total()==0)
+     {
+      Comment("\nNot Trading Time");
+      return(0);
+     }
+   else
+     {
+      Comment("");
+     }
    if(use_daily_target && dailyprofit()>=daily_target)
      {
       Comment("\ndaily target achieved.");
@@ -199,7 +227,7 @@ int start()
      }
    if(stealth_mode && total()>0 && total()<level)
      {
-      int type, res;
+      int type;
       double op, lastlot;
       for(i=0; i<OrdersTotal(); i++)
         {
@@ -309,7 +337,7 @@ int start()
 double dailyprofit()
   {
    int day=Day();
-   double res=0;
+   double res_total;
    for(int i=0; i<OrdersHistoryTotal(); i++)
      {
       if(OrderSelect(i,SELECT_BY_POS,MODE_HISTORY))
@@ -317,10 +345,10 @@ double dailyprofit()
          if(OrderSymbol()!=Symbol() || OrderMagicNumber()!=magic)
             continue;
          if(TimeDay(OrderOpenTime())==day)
-            res+=OrderProfit();
+            res_total+=OrderProfit();
         }
      }
-   return(res);
+   return(res_total);
   }
 //+------------------------------------------------------------------+
 int total()
@@ -438,21 +466,22 @@ int signal()
 //+------------------------------------------------------------------+
 void closeall()
   {
-   int res;
    for(int i=OrdersTotal()-1; i>=0; i--)
      {
-      if(OrderSelect(i,SELECT_BY_POS,MODE_TRADES)){
-      if(OrderSymbol()!=Symbol() || OrderMagicNumber()!=magic)
-         continue;
-      if(OrderType()>1)
-         res=OrderDelete(OrderTicket());
-      else
+      if(OrderSelect(i,SELECT_BY_POS,MODE_TRADES))
         {
-         if(OrderType()==0)
-            res=OrderClose(OrderTicket(),OrderLots(),Bid,slipage,CLR_NONE);
+         if(OrderSymbol()!=Symbol() || OrderMagicNumber()!=magic)
+            continue;
+         if(OrderType()>1)
+            res=OrderDelete(OrderTicket());
          else
-            res=OrderClose(OrderTicket(),OrderLots(),Ask,slipage,CLR_NONE);
+           {
+            if(OrderType()==0)
+               res=OrderClose(OrderTicket(),OrderLots(),Bid,slipage,CLR_NONE);
+            else
+               res=OrderClose(OrderTicket(),OrderLots(),Ask,slipage,CLR_NONE);
+           }
         }
-     }}
+     }
   }
 //+------------------------------------------------------------------+

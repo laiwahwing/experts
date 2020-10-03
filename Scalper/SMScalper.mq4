@@ -124,7 +124,7 @@ int start()
          start_lot=MarketInfo(NULL,MODE_MINLOT);
         }
      }
-   trade_time=Hour()<start_hour||Hour()>end_hour;
+   trade_time=Hour()<start_hour||Hour()>=end_hour;
    if(time_filter&&trade_time&&total()==0)
      {
       Comment("\nNot Trading Time");

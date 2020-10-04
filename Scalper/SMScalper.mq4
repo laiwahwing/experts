@@ -21,7 +21,7 @@
 #define buy -2
 #define sell 2
 //---- input parameters
-extern string comment="SMScalper";
+extern string comment="SMSCP";
 bool      use_daily_target=false;
 double    daily_target=100;
 bool      trade_in_fri=true;

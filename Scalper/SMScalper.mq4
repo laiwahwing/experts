@@ -24,7 +24,7 @@
 extern string comment="SMScalper";
 bool      use_daily_target=false;
 double    daily_target=100;
-extern bool      trade_in_fri=true;
+bool      trade_in_fri=true;
 extern int       magic=253301;
 extern int       slipage=3;
 extern double    start_lot=0.01;
@@ -34,9 +34,9 @@ bool      lot_multiplier=false;
 extern int       lot_percent=15;
 double    multiplier=1.1;
 double    increament=0.01;
-extern bool      use_sl_and_tp=true;
-extern double    sl=20;
-extern double    tp=5;
+bool      use_sl_and_tp=true;
+extern double    stop_loss=30;
+extern double    take_profit=5;
 double    tp_in_money=5.0;
 bool      stealth_mode=true;
 extern bool      use_bb=true;
@@ -56,11 +56,11 @@ extern int       rsi_period=12;
 extern int       rsi_shift=0;
 extern int       lower=30;
 extern int       upper=70;
-extern bool      use_candle=false;
-extern int       candle_timeframe=0;
-extern bool      use_ma=false;
-extern int       ma_period=6;
-extern int       ma_timeframe=0;
+bool      use_candle=false;
+int       candle_timeframe=0;
+bool      use_ma=false;
+int       ma_period=6;
+int       ma_timeframe=0;
 extern bool time_filter=true;
 extern int start_hour=0;
 extern int end_hour=1;
@@ -86,9 +86,9 @@ int init()
    stoplevel=MarketInfo(Symbol(),MODE_STOPLEVEL);
    if(start_lot<minlot)
       Print("lotsize is to small.");
-   if(sl<stoplevel)
+   if(stop_loss*pt<stoplevel)
       Print("stoploss is to tight.");
-   if(tp<stoplevel)
+   if(take_profit*pt<stoplevel)
       Print("takeprofit is to tight.");
    if(minlot==0.01)
       prec=2;
@@ -151,7 +151,7 @@ int start()
          if(stealth_mode)
            {
             if(use_sl_and_tp)
-               ticket=OrderSend(Symbol(),0,start_lot,Ask,slipage,Ask-sl*pt,Ask+tp*pt,comment,magic,0,Blue);
+               ticket=OrderSend(Symbol(),0,start_lot,Ask,slipage,Ask-stop_loss*pt,Ask+take_profit*pt,comment,magic,0,Blue);
             else
                ticket=OrderSend(Symbol(),0,start_lot,Ask,slipage,        0,        0,comment,magic,0,Blue);
            }
@@ -159,14 +159,14 @@ int start()
            {
             if(use_sl_and_tp)
               {
-               if(OrderSend(Symbol(),0,start_lot,Ask,slipage,Ask-sl*pt,Ask+tp*pt,comment,magic,0,Blue)>0)
+               if(OrderSend(Symbol(),0,start_lot,Ask,slipage,Ask-stop_loss*pt,Ask+take_profit*pt,comment,magic,0,Blue)>0)
                  {
                   for(int i=1; i<level; i++)
                     {
                      if(lot_multiplier)
-                        ticket=OrderSend(Symbol(),2,NormalizeDouble(start_lot*MathPow(multiplier,i),prec),Ask-(range*i)*pt,slipage,(Ask-(range*i)*pt)-sl*pt,(Ask-(range*i)*pt)+tp*pt,comment,magic,0,Blue);
+                        ticket=OrderSend(Symbol(),2,NormalizeDouble(start_lot*MathPow(multiplier,i),prec),Ask-(range*i)*pt,slipage,(Ask-(range*i)*pt)-stop_loss*pt,(Ask-(range*i)*pt)+take_profit*pt,comment,magic,0,Blue);
                      else
-                        ticket=OrderSend(Symbol(),2,NormalizeDouble(start_lot+increament*i,prec),Ask-(range*i)*pt,slipage,(Ask-(range*i)*pt)-sl*pt,(Ask-(range*i)*pt)+tp*pt,comment,magic,0,Blue);
+                        ticket=OrderSend(Symbol(),2,NormalizeDouble(start_lot+increament*i,prec),Ask-(range*i)*pt,slipage,(Ask-(range*i)*pt)-stop_loss*pt,(Ask-(range*i)*pt)+take_profit*pt,comment,magic,0,Blue);
                     }
                  }
               }
@@ -190,7 +190,7 @@ int start()
          if(stealth_mode)
            {
             if(use_sl_and_tp)
-               ticket=OrderSend(Symbol(),1,start_lot,Bid,slipage,Bid+sl*pt,Bid-tp*pt,comment,magic,0,Red);
+               ticket=OrderSend(Symbol(),1,start_lot,Bid,slipage,Bid+stop_loss*pt,Bid-take_profit*pt,comment,magic,0,Red);
             else
                ticket=OrderSend(Symbol(),1,start_lot,Bid,slipage,        0,        0,comment,magic,0,Red);
            }
@@ -198,14 +198,14 @@ int start()
            {
             if(use_sl_and_tp)
               {
-               if(OrderSend(Symbol(),1,start_lot,Bid,slipage,Bid+sl*pt,Bid-tp*pt,comment,magic,0,Red)>0)
+               if(OrderSend(Symbol(),1,start_lot,Bid,slipage,Bid+stop_loss*pt,Bid-take_profit*pt,comment,magic,0,Red)>0)
                  {
                   for(i=1; i<level; i++)
                     {
                      if(lot_multiplier)
-                        ticket=OrderSend(Symbol(),slipage,NormalizeDouble(start_lot*MathPow(multiplier,i),prec),Bid+(range*i)*pt,slipage,(Bid+(range*i)*pt)+sl*pt,(Bid+(range*i)*pt)-tp*pt,comment,magic,0,Red);
+                        ticket=OrderSend(Symbol(),slipage,NormalizeDouble(start_lot*MathPow(multiplier,i),prec),Bid+(range*i)*pt,slipage,(Bid+(range*i)*pt)+stop_loss*pt,(Bid+(range*i)*pt)-take_profit*pt,comment,magic,0,Red);
                      else
-                        ticket=OrderSend(Symbol(),slipage,NormalizeDouble(start_lot+increament*i,prec),Bid+(range*i)*pt,slipage,(Bid+(range*i)*pt)+sl*pt,(Bid+(range*i)*pt)-tp*pt,comment,magic,0,Red);
+                        ticket=OrderSend(Symbol(),slipage,NormalizeDouble(start_lot+increament*i,prec),Bid+(range*i)*pt,slipage,(Bid+(range*i)*pt)+stop_loss*pt,(Bid+(range*i)*pt)-take_profit*pt,comment,magic,0,Red);
                     }
                  }
               }
@@ -243,9 +243,9 @@ int start()
          if(use_sl_and_tp)
            {
             if(lot_multiplier)
-               ticket=OrderSend(Symbol(),0,NormalizeDouble(lastlot*multiplier,prec),Ask,slipage,Ask-sl*pt,Ask+tp*pt,comment,magic,0,Blue);
+               ticket=OrderSend(Symbol(),0,NormalizeDouble(lastlot*multiplier,prec),Ask,slipage,Ask-stop_loss*pt,Ask+take_profit*pt,comment,magic,0,Blue);
             else
-               ticket=OrderSend(Symbol(),0,NormalizeDouble(lastlot+increament,prec),Ask,slipage,Ask-sl*pt,Ask+tp*pt,comment,magic,0,Blue);
+               ticket=OrderSend(Symbol(),0,NormalizeDouble(lastlot+increament,prec),Ask,slipage,Ask-stop_loss*pt,Ask+take_profit*pt,comment,magic,0,Blue);
            }
          else
            {
@@ -260,9 +260,9 @@ int start()
          if(use_sl_and_tp)
            {
             if(lot_multiplier)
-               ticket=OrderSend(Symbol(),1,NormalizeDouble(lastlot*multiplier,prec),Bid,slipage,Bid+sl*pt,Bid-tp*pt,comment,magic,0,Red);
+               ticket=OrderSend(Symbol(),1,NormalizeDouble(lastlot*multiplier,prec),Bid,slipage,Bid+stop_loss*pt,Bid-take_profit*pt,comment,magic,0,Red);
             else
-               ticket=OrderSend(Symbol(),1,NormalizeDouble(lastlot+increament,prec),Bid,slipage,Bid+sl*pt,Bid-tp*pt,comment,magic,0,Red);
+               ticket=OrderSend(Symbol(),1,NormalizeDouble(lastlot+increament,prec),Bid,slipage,Bid+stop_loss*pt,Bid-take_profit*pt,comment,magic,0,Red);
            }
          else
            {

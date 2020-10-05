@@ -56,7 +56,7 @@ extern int       rsi_period=12;
 extern int       rsi_shift=0;
 extern int       lower=30;
 extern int       upper=70;
-bool      use_candle=false;
+extern bool      use_candle=false;
 int       candle_timeframe=0;
 bool      use_ma=false;
 int       ma_period=6;
@@ -372,42 +372,19 @@ int signal()
    double loBB=iBands(Symbol(),0,bb_period,bb_deviation,0,PRICE_CLOSE,MODE_LOWER,bb_shift);
    double stoch=iStochastic(Symbol(),0,k,d,slowing,MODE_SMA,price_field,MODE_SIGNAL,stoch_shift);
    double rsi=iRSI(Symbol(),0,rsi_period,PRICE_CLOSE,rsi_shift);
-   double ma=iMA(NULL,ma_timeframe,ma_period,0,0,0,0);
-   bool b15s=iClose(NULL,candle_timeframe,1)<iClose(NULL,candle_timeframe,2)<iClose(NULL,candle_timeframe,3);
-   bool b15b=iClose(NULL,candle_timeframe,3)<iClose(NULL,candle_timeframe,2)<iClose(NULL,candle_timeframe,1);
-   bool ma_up=true;
-   bool ma_down=true;
-   if(use_bb && use_stoch && use_rsi && !use_candle && use_ma)
-     {
-      ma_up=iClose(NULL,candle_timeframe,1)>ma;
-      ma_down=iClose(NULL,candle_timeframe,1)<ma;
-      if(rsi>upper && ma_down)
-        {
-         return(sell);
-        }
-      if(rsi<lower && ma_up)
-        {
-         return(buy);
-        }
-     }
+   bool candle_up=MarketInfo(Symbol(),MODE_BID)>iOpen(NULL,candle_timeframe,0);
+   bool candle_down=MarketInfo(Symbol(),MODE_ASK)<iOpen(NULL,candle_timeframe,0);
    if(use_bb && use_stoch && use_rsi && use_candle)
      {
-      bool candle_up=MarketInfo(Symbol(),MODE_BID)<iClose(NULL,candle_timeframe,1);
-      bool candle_down=MarketInfo(Symbol(),MODE_BID)>iOpen(NULL,candle_timeframe,1);
-      bool candle_prev2=MathAbs(iClose(NULL,candle_timeframe,2) - iOpen(NULL,candle_timeframe,2)) < 0.0015;
-      bool candle_prev1=MathAbs(iClose(NULL,candle_timeframe,1) - iOpen(NULL,candle_timeframe,1)) < 0.0012;
+      bool candle_prev2=MathAbs(iClose(NULL,candle_timeframe,2) - iOpen(NULL,candle_timeframe,2)) < 0.0005;
+      bool candle_prev1=MathAbs(iClose(NULL,candle_timeframe,1) - iOpen(NULL,candle_timeframe,1)) < 0.0002;
       bool candle_go_down=iClose(NULL,candle_timeframe,1)<iClose(NULL,candle_timeframe,2);
       bool candle_go_up=iClose(NULL,candle_timeframe,1)>iClose(NULL,candle_timeframe,2);
-      if(use_ma)
-        {
-         ma_up=iClose(NULL,candle_timeframe,1)>ma;
-         ma_down=iClose(NULL,candle_timeframe,1)<ma;
-        }
-      if(rsi>upper && candle_prev1 && candle_prev2 && candle_up && candle_go_down && ma_down)
+      if(High[bb_shift]>upBB && stoch>up_level && rsi>upper && candle_up )
         {
          return(sell);
         }
-      if(rsi<lower && candle_prev1 && candle_prev2 && candle_down && candle_go_up && ma_up)
+      if(Low[bb_shift]<loBB && stoch<lo_level && rsi<lower && candle_down)
         {
          return(buy);
         }

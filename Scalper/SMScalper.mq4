@@ -380,11 +380,11 @@ int signal()
       bool candle_prev1=MathAbs(iClose(NULL,candle_timeframe,1) - iOpen(NULL,candle_timeframe,1)) < 0.0002;
       bool candle_go_down=iClose(NULL,candle_timeframe,1)<iClose(NULL,candle_timeframe,2);
       bool candle_go_up=iClose(NULL,candle_timeframe,1)>iClose(NULL,candle_timeframe,2);
-      if(High[bb_shift]>upBB && stoch>up_level && rsi>upper && candle_up )
+      if(High[bb_shift]>upBB && stoch>up_level && rsi>upper && candle_down )
         {
          return(sell);
         }
-      if(Low[bb_shift]<loBB && stoch<lo_level && rsi<lower && candle_down)
+      if(Low[bb_shift]<loBB && stoch<lo_level && rsi<lower && candle_up)
         {
          return(buy);
         }

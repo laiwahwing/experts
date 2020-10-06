@@ -1,5 +1,5 @@
 //+------------------------------------------------------------------+
-//|                                        base on   swb grid 4 .mq4 |
+//|                                              base on swbgrid.mq4 |
 //|                                                totom sukopratomo |
 //|                                            forexengine@gmail.com |
 //+------------------------------------------------------------------+
@@ -14,10 +14,12 @@
 //+-----  ------------+
 //+-----  ------+
 //+------------------------------------------------------------------+
+//+--- 2020-10-06 1.3: entry can without stoch and bb; new lot percent;
 
 #property copyright "cheedo lai"
 #property link      "lhuarong@hotmail.com"
-#property description "scalper on the morning"
+#property description "scalper on the morning,timeframe m1, best on low spread pair like eurgbp,gbpusd"
+#property version "1.3"
 #define buy -2
 #define sell 2
 //---- input parameters
@@ -31,7 +33,7 @@ extern double    start_lot=0.01;
 double    range=12;
 int       level=1;
 bool      lot_multiplier=false;
-extern int       lot_percent=15;
+extern int       lot_percent=5;
 double    multiplier=1.1;
 double    increament=0.01;
 bool      use_sl_and_tp=true;
@@ -39,11 +41,11 @@ extern double    stop_loss=30;
 extern double    take_profit=5;
 double    tp_in_money=5.0;
 bool      stealth_mode=true;
-extern bool      use_bb=true;
+extern bool      use_bb=false;
 extern int       bb_period=20;
 extern int       bb_deviation=2;
 extern int       bb_shift=0;
-extern bool      use_stoch=true;
+extern bool      use_stoch=false;
 extern int       k=5;
 extern int       d=3;
 extern int       slowing=3;
@@ -56,7 +58,7 @@ extern int       rsi_period=12;
 extern int       rsi_shift=0;
 extern int       lower=30;
 extern int       upper=70;
-extern bool      use_candle=false;
+extern bool      use_candle=true;
 int       candle_timeframe=0;
 bool      use_ma=false;
 int       ma_period=6;
@@ -64,6 +66,7 @@ int       ma_timeframe=0;
 extern bool time_filter=true;
 extern int start_hour=0;
 extern int end_hour=1;
+extern int max_spread=10;
 bool trade_time;
 double pt;
 double minlot;
@@ -114,7 +117,7 @@ int start()
   {
    if(lot_percent!=0)
      {
-      start_lot=AccountBalance() * lot_percent * 0.01 * 0.001;
+      start_lot=AccountEquity() * lot_percent * 0.01 * 0.001 * 3;
       if(start_lot>MarketInfo(NULL,MODE_MAXLOT))
         {
          start_lot=MarketInfo(NULL,MODE_MAXLOT);
@@ -133,6 +136,13 @@ int start()
    else
      {
       Comment("");
+     }
+   int cur_spread=MarketInfo(Symbol(),MODE_SPREAD);
+   if(cur_spread>max_spread)
+     {
+      Print(Symbol(), "Speard too high: Current spread is ", cur_spread);
+      Sleep(10);
+      return(0);
      }
    if(use_daily_target && dailyprofit()>=daily_target)
      {
@@ -376,11 +386,7 @@ int signal()
    bool candle_down=MarketInfo(Symbol(),MODE_ASK)<iOpen(NULL,candle_timeframe,0);
    if(use_bb && use_stoch && use_rsi && use_candle)
      {
-      bool candle_prev2=MathAbs(iClose(NULL,candle_timeframe,2) - iOpen(NULL,candle_timeframe,2)) < 0.0005;
-      bool candle_prev1=MathAbs(iClose(NULL,candle_timeframe,1) - iOpen(NULL,candle_timeframe,1)) < 0.0002;
-      bool candle_go_down=iClose(NULL,candle_timeframe,1)<iClose(NULL,candle_timeframe,2);
-      bool candle_go_up=iClose(NULL,candle_timeframe,1)>iClose(NULL,candle_timeframe,2);
-      if(High[bb_shift]>upBB && stoch>up_level && rsi>upper && candle_down )
+      if(High[bb_shift]>upBB && stoch>up_level && rsi>upper && candle_down)
         {
          return(sell);
         }
@@ -389,6 +395,23 @@ int signal()
          return(buy);
         }
      }
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+   if(!use_bb && !use_stoch && use_rsi && use_candle)
+     {
+      if(rsi>upper && candle_down)
+        {
+         return(sell);
+        }
+      if(rsi<lower && candle_up)
+        {
+         return(buy);
+        }
+     }
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
    if(use_bb && use_stoch && use_rsi && !use_candle)
      {
       if(High[bb_shift]>upBB && stoch>up_level && rsi>upper)
@@ -396,48 +419,69 @@ int signal()
       if(Low[bb_shift]<loBB && stoch<lo_level && rsi<lower)
          return(buy);
      }
-   if(use_bb && use_stoch && !use_rsi)
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+   if(use_bb && use_stoch && !use_rsi && !use_candle)
      {
       if(High[bb_shift]>upBB && stoch>up_level)
          return(sell);
       if(Low[bb_shift]<loBB && stoch<lo_level)
          return(buy);
      }
-   if(use_bb && !use_stoch && !use_rsi)
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+   if(use_bb && !use_stoch && !use_rsi && !use_candle)
      {
       if(High[bb_shift]>upBB)
          return(sell);
       if(Low[bb_shift]<loBB)
          return(buy);
      }
-   if(!use_bb && use_stoch && use_rsi)
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+   if(!use_bb && use_stoch && use_rsi && !use_candle)
      {
       if(stoch>up_level && rsi>upper)
          return(sell);
       if(stoch<lo_level && rsi<lower)
          return(buy);
      }
-   if(!use_bb && use_stoch && !use_rsi)
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+   if(!use_bb && use_stoch && !use_rsi && !use_candle)
      {
       if(stoch>up_level)
          return(sell);
       if(stoch<lo_level)
          return(buy);
      }
-   if(use_bb && !use_stoch && use_rsi)
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+   if(use_bb && !use_stoch && use_rsi && !use_candle)
      {
       if(High[bb_shift]>upBB && rsi>upper)
          return(sell);
       if(Low[bb_shift]<loBB && rsi<lower)
          return(buy);
      }
-   if(!use_bb && !use_stoch && use_rsi)
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+   if(!use_bb && !use_stoch && use_rsi && !use_candle)
      {
       if(rsi>upper)
          return(sell);
       if(rsi<lower)
          return(buy);
      }
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
    return(0);
   }
 //+------------------------------------------------------------------+
